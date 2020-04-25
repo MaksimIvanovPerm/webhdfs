@@ -23,7 +23,7 @@ All subprograms have -h|--help call option
 --------------------------------------------------------------------------------------
 ENV:
 SILENT          - In case it non-zero: turns off output of library-subprogram messages to stdout;
-                  Messages still will be made by the subproc, but will be wroted to logfile only;
+                  Messages still will be made by the subproc, but will be written to logfile only;
 ---------------------------------------------------------------------------------------
 Logdile:        - /tmp/webhdfs_lib.log
 Config:         - /home/oracle/webhdfs/settings.conf
