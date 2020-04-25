@@ -1,6 +1,6 @@
 # webhdfs
 bash interface to HDFS through webhdfs api
-
+"""
  . ./webhdfs/webhdfs_lib.sh; usage
 Summary of library subprograms:
 mk_dir          - Make hdfs-directory with given name and permission mode.
@@ -27,4 +27,4 @@ SILENT          - In case it non-zero: turns off output of library-subprogram me
 ---------------------------------------------------------------------------------------
 Logdile:        - /tmp/webhdfs_lib.log
 Config:         - /home/oracle/webhdfs/settings.conf
-
+"""
