@@ -39,8 +39,9 @@ then
 	[ "$CONSOLE_OUTPUT" == "Y" ] && cat "$1" | awk -v runid=$RUNID '{print runid": "$0}'
 	cat "$1" | awk -v runid=$RUNID '{print runid": "$0}' >> $LOG_FILE
 else
-	[ -e "$LOG_FILE" ] && echo "${RUNID}:${datetime}: $1" >> $LOG_FILE
-	[ "$CONSOLE_OUTPUT" == "Y" ] && echo "${RUNID}:${datetime}: $1"
+	v_x=${1//${V_PWD}/"..."}
+	[ -e "$LOG_FILE" ] && echo "${RUNID}:${datetime}: ${v_x}" >> $LOG_FILE
+	[ "$CONSOLE_OUTPUT" == "Y" ] && echo "${RUNID}:${datetime}: ${v_x}"
 fi
 
 if [ "$FOLLOW_LINE_LIMITS" == "Y" ]
@@ -197,8 +198,8 @@ fi
 return "0"
 }
 
-parse_rmsetxattr_response() {
-local v_module="parse_setxattr_response"
+parse_error_response() {
+local v_module="parse_error_response"
 [ -z "$1" ] && return 1
 $PYTHON << __EOF__
 import sys,  json
@@ -225,7 +226,7 @@ create_file_usage() {
 printf "%s\n" "Usage: create_file [options]
 Here the options are:
 -n|--name	[file name]		- Name of file to create in hdfs; Mandatory;
--s|--source	[file name]		- Name of local-file, which content'll be uploaded to hdfs with name from -n option; Mandatory;
+-l|--local	[file name]		- Name of local-file, which content'll be uploaded to hdfs with name from -n option; Mandatory;
 -o|--overwrite	[true|false|t|f]	- Do (t|true) of do not (f|false - default) rewtite hdfs-file, if there is file with given name;
 -p|--permission	[0-1777]		- Permission for new file, default: 644;
 -m|--maxtime	[int]			- Limit for uploading time; In curl's term it's value for --max-time option; Default 10 seconds;
@@ -248,11 +249,13 @@ Here the options are:
 -n|--name       [name]  - Name of hdfs-attribute (file|folder) which attribute you want to get; Optional
 			- In case it not set: root point of your hdfs-hierarchy will be processed;
 -a|--attribute	[name]  - Name of attribute to get it out from  hdfs; Optional;
-			- In case it empty: all attributes of a given hdfs-item will be retrieved (if they are);
-			- Please note, you have to prefix attribute name with 'user.';
-			- And it'll be retrieved with that prefix;
-			- See https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html
+			  In case it empty: all attributes of a given hdfs-item will be retrieved (if they are);
+			  Please note, you have to prefix attribute name with 'user.';
+			  And it'll be retrieved with that prefix;
+			  See https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html
 -e|--encoding		- How to encode value of retrieved attribue; Optional; Def: text; Allowed: text|hex|base64;
+-b|--base64		- In case you asking hdfs about value of an one xattr, and you made the xattr earlier through setxattr -b,
+			  You can orderm by -b|--base64 decoding this value of this xattr from base64;
 -h|--help               - This help
 "
 }
@@ -341,6 +344,24 @@ Note: buffersize parameter of rest-api APPEND request - currentlly not supported
 "
 }
 
+renamefile_usage() {
+printf "%s\n" "Usage: renamefile [options]
+Here the options are:
+-n|--name	[name]  - Name of hdfs-item, which you want to rename; Mandatory;
+-d|--dest	[name]  - New name of for renaming; Mandatory; It has to be absolute path;
+-h|--help               - This help
+"
+}
+
+setmod() {
+printf "%s\n" "Usage: renamefile [options]
+Here the options are:
+-n|--name       [name]  - Name of hdfs-item, for which you want to change permissions; Mandatory;
+-p|--permission	[int]	- The permission of a file/directory, octal, valid value: 0 - 1777; Mandatory;
+-h|--help               - This help
+"
+}
+
 usage() {
 printf "%s\n" "Summary of library subprograms:
 mk_dir		- Make hdfs-directory with given name and permission mode.
@@ -354,16 +375,19 @@ createfile	- Make file at hdfs, by uploading there given local file;
 delete		- Delete file|directory at hdfs, optionally - recursively;
 getfile         - Get given file from hdfs
 appendtofile    - Append content of given local-file to given hdfs-file;
+renamefile	- Renaming
+setmod		- Set permission of a file/directory;
 
 getxattr	- Get out from hdfs extended attribute(s), of the given file|folder
 setxattr	- Set an extended-attribute to the given file|folder in hdfs
 rmxattr		- Remove given extended-attribute of the given file|folder in hdfs
 
 All subprograms have -h|--help call option
+In all subprograms value for option: -n|--name - has to be an absolute path
 --------------------------------------------------------------------------------------
 ENV:
 SILENT		- In case it non-zero: turns off output of library-subprogram messages to stdout; 
-		  Messages still will be made by the subproc, but will be wroted to logfile only;
+		  Messages still will be made by the subproc, but will be written to logfile only;
 ---------------------------------------------------------------------------------------
 Logdile:	- ${LOG_FILE}
 Config:		- ${CONF_FILE}"
@@ -407,6 +431,195 @@ fi
 return 0
 }
 #== HDSF ====================================================================================================================
+setmod() {
+local v_module="setmod"
+local v_count v_cmd rc v_x v_y V_URL=""
+local v_operation="?op=SETPERMISSION"
+local v_hdfspath=""
+local v_permission=""
+
+log_info "${v_module} starting"
+empty_args_notallowed "$1" "$v_module"
+if [ "$?" -ne "0" ]
+then
+        setmod_usage; return 1
+fi
+
+while [ "$1" != "" ]
+do
+        case "$1" in
+                "-h"|"--help")
+                setmod_usage; return 0
+                ;;               
+                "-n"|"--name")
+                if [ -z "$2" ]
+                then
+                        log_info "${v_module} you have to specify value for -n|--name option;"
+                        setmod_usage; return 1
+                fi
+                v_hdfspath="$2"
+                shift 2
+                ;;
+                "-p"|"--permission")
+                if [ -z "$2" ]
+                then
+                        log_info "${v_module} you have to specify value for -p|--permission option;"
+                        setmod_usage; return 1
+                fi
+                v_permission="$2"
+                shift 2
+                ;;
+		*)
+                log_info "${v_module} ${1} is not an option;"
+                setmod_usage; return 1
+                ;;
+        esac
+done
+
+if [ -z "$v_hdfspath" -o -z "$v_permission" ]
+then
+	log_info "${v_module} you have to set name and permission-mode"
+	setmod_usage; return 1
+fi
+
+if [[ ! "$v_permission" =~ [0-9]{3,4} ]]
+then
+	log_info "${v_module} ${v_permission} is a wrong value for -p|--permission option;"
+	setmod_usage; return 1
+fi
+if [ "$v_permission" -gt "1777" -o "$v_permission" -lt "0" ] 
+then
+	log_info "${v_module} ${v_permission} is a wrong value for -p|--permission option;"
+	setmod_usage; return 1
+fi
+
+v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
+v_operation="${v_operation}&permission=${v_permission}"
+
+V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
+V_URL=${V_URL%$'\r'}
+v_cmd="${CURL} -X PUT -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+log_info "$v_module ${v_cmd}"
+
+v_count="1"
+while [ "$v_count" -lt "$RETRY_LIMIT" ]
+do
+        cat /dev/null > "$TEMP_FILE"
+        eval "$v_cmd"
+        rc="$?"
+        if [ "$rc" -eq "0" ]
+        then
+                log_info "${v_module} hdfs-response was obtained successfully"
+                log_info "$TEMP_FILE" "logfile"
+                v_x=""
+                grep_json "$TEMP_FILE" v_x
+                if [ -z "$v_x" ]
+                then
+                        return 0
+                else
+                        v_x=$(parse_error_response "$v_x"); v_y="$?"
+                        echo "$v_x"
+                        return "$v_y"
+                fi
+        else
+                log_info "${v_module} attempt ${v_count} fail ${rc}"
+        fi
+        ((v_count++))
+done
+log_info "${v_module} done"
+return "$?"
+}
+
+renamefile() {
+local v_module="renamefile"
+local v_count v_cmd rc v_x v_y V_URL=""
+local v_operation="?op=RENAME"
+local v_hdfspath=""
+local v_newname=""
+
+log_info "${v_module} starting"
+empty_args_notallowed "$1" "$v_module"
+if [ "$?" -ne "0" ]
+then
+        renamefile_usage; return 1
+fi
+
+while [ "$1" != "" ]
+do
+        case "$1" in
+                "-h"|"--help")
+                renamefile_usage; return 0
+                ;;
+                "-n"|"--name")
+                if [ -z "$2" ]
+                then
+                        log_info "${v_module} you have to specify value for -n|--name option;"
+                        appendtofile_usage; return 1
+                fi
+                v_hdfspath="$2"
+                shift 2
+                ;;
+                "-d"|"--dest")
+                if [ -z "$2" ]
+                then
+                        log_info "${v_module} you have to specify value for -d|--dest option;"
+                        appendtofile_usage; return 1
+                fi
+                v_newname="$2"
+                shift 2
+                ;;
+                *)
+                log_info "${v_module} ${1} is not an option;"
+                renamefile_usage; return 1
+                ;;
+        esac
+done
+
+if [ -z "$v_newname" -o -z "$v_hdfspath" ]
+then
+	log_info "${v_module} current name and|or new-name is|are not set"
+	renamefile_usage; return 1
+fi
+
+v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
+v_newname=$(prefix_hdfspath "$v_newname")
+v_operation="${v_operation}&destination=${v_newname}"
+
+V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
+V_URL=${V_URL%$'\r'}
+v_cmd="${CURL} -X PUT -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+log_info "$v_module ${v_cmd}"
+
+v_count="1"
+while [ "$v_count" -lt "$RETRY_LIMIT" ]
+do
+        cat /dev/null > "$TEMP_FILE"
+        eval "$v_cmd"
+        rc="$?"
+        if [ "$rc" -eq "0" ]
+        then
+                log_info "${v_module} hdfs-response was obtained successfully"
+                log_info "$TEMP_FILE" "logfile"
+                v_x=""
+                grep_json "$TEMP_FILE" v_x
+                if [ -z "$v_x" ]
+                then
+                        return 0
+                else
+                        v_x=$(parse_error_response "$v_x"); v_y="$?"
+                        echo "$v_x"
+                        return "$v_y"
+                fi
+        else
+                log_info "${v_module} attempt ${v_count} fail ${rc}"
+        fi
+        ((v_count++))
+done
+log_info "${v_module} done"
+return "$?"
+
+}
+
 appendtofile() {
 local v_module="appendtofile"
 local v_count v_cmd rc v_x v_y V_URL=""
@@ -758,7 +971,7 @@ do
                 then
                         return 0
                 else
-                        v_x=$(parse_rmsetxattr_response "$v_x"); v_y="$?"
+                        v_x=$(parse_error_response "$v_x"); v_y="$?"
                         echo "$v_x"
                         return "$v_y"
                 fi
@@ -871,7 +1084,7 @@ do
 		then
 			return 0
 		else
-			v_x=$(parse_rmsetxattr_response "$v_x"); v_y="$?"
+			v_x=$(parse_error_response "$v_x"); v_y="$?"
                         echo "$v_x"
 			return "$v_y"
                 fi
@@ -891,6 +1104,7 @@ local v_operation="?op=GETXATTRS"
 local v_hdfspath=""
 local v_encoding="text"
 local v_xattrname=""
+local v_decodefrom=""
 
 log_info "${v_module} starting"
 while [ "$1" != "" ]
@@ -898,6 +1112,10 @@ do
 	case "$1" in
 		"-h"|"--help")
 		getxattr_usage; return 0
+		;;
+		"-b"|"--base64")
+		v_decodefrom="base64"
+		shift 1
 		;;
 		"-n"|"--name")
 		if [ -z "$2" ]
@@ -956,7 +1174,35 @@ do
                 v_x=$(parse_getxattrs_response "$v_x"); v_y="$?"
 		if [ "$v_y" -eq "0" ]
 		then
-	                echo "$v_x" | column -t
+			if [ -z "$v_decodefrom" ]
+			then
+		                echo "$v_x" | column -t
+			elif [ "$v_decodefrom" == "base64" ]
+			then
+				v_count=$(echo "$v_x" | wc -l)
+				if [ "$v_count" -eq "1" ]
+				then
+					v_key=$(echo "$v_x" | awk '{printf "%s", $1;}')	
+					v_value=$(echo "$v_x" | awk '{printf "%s", $2;}')
+					v_value=${v_value//\"/""}
+					#log_info "${v_module} v_value: ${v_value}"
+					v_value=$(echo "$v_value" | base64 -d 2>/dev/null); v_rc="$?"
+					if [ "$v_rc" -eq "0" ]
+					then
+						echo "${v_key} ${v_value}" | column -t
+					else
+						log_info "${v_module} in key-value ${v_x} value can not ne decoded from base64"
+						return "$v_rc"
+					fi
+				else
+					log_info "${v_module} hdfs-answer contains several attribute stricture"
+					log_info "${v_module} decoding from base64 is supposed to be used with only one attr"
+					log_info "${v_module} so base64 decoding attr-values: will be ignored;"
+					echo "$v_x" | column -t					
+				fi
+			else
+				log_info "${v_module} unknown value in v_decodefrom: ${v_decodefrom}"
+			fi
 		else
 			echo "$v_x"
 		fi
