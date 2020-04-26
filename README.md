@@ -14,12 +14,15 @@ createfile      - Make file at hdfs, by uploading there given local file;
 delete          - Delete file|directory at hdfs, optionally - recursively;
 getfile         - Get given file from hdfs
 appendtofile    - Append content of given local-file to given hdfs-file;
+renamefile      - Renaming
+setmod          - Set permission of a file/directory;
 
 getxattr        - Get out from hdfs extended attribute(s), of the given file|folder
 setxattr        - Set an extended-attribute to the given file|folder in hdfs
 rmxattr         - Remove given extended-attribute of the given file|folder in hdfs
 
 All subprograms have -h|--help call option
+In all subprograms value for option: -n|--name - has to be an absolute path
 --------------------------------------------------------------------------------------
 ENV:
 SILENT          - In case it non-zero: turns off output of library-subprogram messages to stdout;
