@@ -1,5 +1,6 @@
 # webhdfs
 bash interface to HDFS through webhdfs api
+python 2.6, with default set of python-modules, is enough
 ```
  . ./webhdfs/webhdfs_lib.sh; usage
 Summary of library subprograms:
