@@ -34,7 +34,27 @@ Logdile:        - /tmp/webhdfs_lib.log
 Config:         - /home/oracle/webhdfs/settings.conf
 ```
 
-Also I recently added mrails_lib.sh and mrails.conf: shell resources which intended to be used as application level program;
+# mrails
+app-level procedures for uploading data to hdfs;
+
+Also I recently added mrails_lib.sh and mrails.conf: shell-resources, which intended to be used as application level program;
 mrails_lib.sh provides you with routines for uploading to hdfs oracle-awr, atop (upload_awrto_storage & upload_atopto_storage routines) and some csv-file (upload_to_storage);
 In case of uploadign to hdfs some csv-file: it is supposed that given csv-file: is mainteined by some other program or task or utility ao something like it;
 upolad_to_storade-routine: does not anything with given csv-file, except reading data from it;
+
+mriails_lib.sh uses routines from webhdfs_lib.sh;
+Also mrails_lib.sh uses sqlite, version >=3.6.20 of sqlite: is enough
+An example of using mrails-routine:
+```
+cat ./atop.sh
+#!/bin/bash
+sudo su -l oracle << __EOFF__
+. /etc/profile.d/ora_env.sh
+cd /home/oracle/webhdfs
+env | sort > /tmp/awrcron.log
+pwd>>/tmp/awrcron.log
+export SILENT=""
+. ./mrails_lib.sh; upload_atopto_storage -d "atop" 1>>/tmp/atopcron.log 2>&1
+delete_aux_files
+__EOFF__
+```
