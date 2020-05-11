@@ -363,7 +363,7 @@ Here the options are:
 }
 
 usage() {
-printf "%s\n" "Summary of library subprograms:
+printf "%s\n" "HDFS-interface's subprograms brief desc:
 mk_dir		- Make hdfs-directory with given name and permission mode.
 		  Default permission is 644 for files, 755 for directories; Valid Values 0 - 1777
 ls_dir		- Listing items in given hdfs-directory, or show some info about given hdfs-file;
@@ -498,7 +498,7 @@ v_operation="${v_operation}&permission=${v_permission}"
 
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X PUT -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X PUT ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 
 v_count="1"
@@ -583,11 +583,12 @@ fi
 
 v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 v_newname=$(prefix_hdfspath "$v_newname")
+v_newname="/${WH_PATH}"${v_newname}
 v_operation="${v_operation}&destination=${v_newname}"
 
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X PUT -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X PUT ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 
 v_count="1"
@@ -606,7 +607,7 @@ do
                 then
                         return 0
                 else
-                        v_x=$(parse_error_response "$v_x"); v_y="$?"
+                        v_x=$(parse_boolean_response "$v_x"); v_y="$?"
                         echo "$v_x"
                         return "$v_y"
                 fi
@@ -708,7 +709,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
 #### -v option and 2>&1 is essential here ###
-v_cmd="${CURL} -X POST -v -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>&1"
+v_cmd="${CURL} -X POST -v ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>&1"
 #############################################
 log_info "$v_module ${v_cmd}"
 
@@ -736,7 +737,7 @@ then
         log_info "${v_module} well, so sorry but inode-location for your file was not provided by hdfs; exiting"
         return 1
 else
-        v_cmd="${CURL} -f -s -X POST --tlsv1.2 -k -u \"${V_LOGIN}:${V_PWD}\" -T ${v_localfile} --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} ${v_location}"
+        v_cmd="${CURL} -X POST -f ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" -T ${v_localfile} --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} ${v_location}"
         log_info "$v_module try to append date from ${v_localfile} to ${v_hdfspath}; Max-time limit is: ${v_maxtime}"
         log_info "$v_module ${v_cmd}"
         v_count="1"
@@ -849,7 +850,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
 #### -v option and 2>&1 is essential here ###
-v_cmd="${CURL} -X GET -v -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>&1"
+v_cmd="${CURL} -X GET -v ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>&1"
 #############################################
 log_info "$v_module ${v_cmd}"
 
@@ -877,7 +878,7 @@ then
         return 1
 else
 	cat /dev/null > "$v_localfile"
-        v_cmd="${CURL} -f -s -X GET --tlsv1.2 -k -u \"${V_LOGIN}:${V_PWD}\" -o ${v_localfile} --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} ${v_location}"
+        v_cmd="${CURL} -X GET -f ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" -o ${v_localfile} --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} ${v_location}"
         log_info "$v_module try to download ${v_hdfspath} as ${v_localfile}; Max-time limit is: ${v_maxtime}"
         log_info "$v_module ${v_cmd}"
         v_count="1"
@@ -952,7 +953,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 v_operation="${v_operation}&xattr.name=${v_xattrname}"
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X PUT -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X PUT ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 
 v_count="1"
@@ -981,7 +982,7 @@ do
         ((v_count++))
 done
 log_info "${v_module} done"
-return "$?"
+return "$rc"
 }
 
 setxattr() {
@@ -1066,7 +1067,7 @@ v_operation="${v_operation}&xattr.value=${v_xattrval}"
 v_operation="${v_operation}&flag=${v_flag}"
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X PUT -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X PUT ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 v_count="1"
 while [ "$v_count" -lt "$RETRY_LIMIT" ]
@@ -1157,7 +1158,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 v_operation="${v_operation}&encoding=${v_encoding}"
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X GET -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X GET ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 
 v_count="1"
@@ -1272,7 +1273,7 @@ v_operation="${v_operation}&recursive=${v_recursive}"
 log_info "${v_module} ok, let's begin"
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X DELETE -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X DELETE ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 
 v_count="1"
@@ -1406,7 +1407,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
 #### -v option and 2>&1 is essential here ###
-v_cmd="${CURL} -X PUT -v -s -k --tlsv1.2 -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>&1"
+v_cmd="${CURL} -X PUT -v ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>&1"
 #############################################
 log_info "$v_module ${v_cmd}"
 v_count="1"
@@ -1432,7 +1433,8 @@ then
 	log_info "${v_module} well, so sorry but inode-location for your file was not provided by hdfs; exiting"
 	return 1
 else
-	v_cmd="${CURL} -f -s -i -T \"${v_source}\" -X PUT --tlsv1.2 -k -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} --trace-ascii \"${TEMP_FILE}\" ${v_location}"
+	#v_cmd="${CURL} -T \"${v_source}\" -X PUT -i -f ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} --trace-ascii \"${TEMP_FILE}\" ${v_location}"
+	v_cmd="${CURL} -T \"${v_source}\" -X PUT -i -f ${GENERIC_OPTION} -u \"${V_LOGIN}:${V_PWD}\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${v_maxtime} ${v_location}"
 	log_info "$v_module try to upload ${v_source} as ${v_hdfspath}; Max-time limit is: ${v_maxtime}"
 	log_info "$v_module ${v_cmd}"
 	v_count="1"
@@ -1453,6 +1455,7 @@ else
 	done
 	return "$rc"
 fi
+return 0
 }
 
 itemstatus() {
@@ -1487,7 +1490,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
-v_cmd="${CURL} -X GET -s --tlsv1.2 -k -u \"$V_LOGIN:$V_PWD\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X GET ${GENERIC_OPTION} -u \"$V_LOGIN:$V_PWD\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 v_count="1"
 while [ "$v_count" -lt "$RETRY_LIMIT" ]
@@ -1550,7 +1553,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
 #log_info "$v_module url: ${V_URL}"
-v_cmd="${CURL} -X GET -s --tlsv1.2 -k -u \"$V_LOGIN:$V_PWD\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X GET ${GENERIC_OPTION} -u \"$V_LOGIN:$V_PWD\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}" 
 v_count="1"
 while [ "$v_count" -lt "$RETRY_LIMIT" ]
@@ -1637,7 +1640,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
 #log_info "$v_module url: ${V_URL}"
-v_cmd="${CURL} -X PUT -s --tlsv1.2 -k -u \"$V_LOGIN:$V_PWD\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
+v_cmd="${CURL} -X PUT ${GENERIC_OPTION} -u \"$V_LOGIN:$V_PWD\" --connect-timeout ${CONNECT_TIMEOUT} --max-time ${MAX_TIME} \"$V_URL\" 1>\"$TEMP_FILE\" 2>/dev/null"
 log_info "$v_module ${v_cmd}"
 v_count="1"
 while [ "$v_count" -lt "$RETRY_LIMIT" ]
