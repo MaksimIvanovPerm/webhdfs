@@ -4,7 +4,7 @@ bash interface to HDFS through webhdfs api
 python 2.6, with default set of python-modules, is enough
 ```
  . ./webhdfs/webhdfs_lib.sh; usage
-Summary of library subprograms:
+HDFS-interface's subprograms brief desc:
 mk_dir          - Make hdfs-directory with given name and permission mode.
                   Default permission is 644 for files, 755 for directories; Valid Values 0 - 1777
 ls_dir          - Listing items in given hdfs-directory, or show some info about given hdfs-file;
@@ -33,3 +33,8 @@ SILENT          - In case it non-zero: turns off output of library-subprogram me
 Logdile:        - /tmp/webhdfs_lib.log
 Config:         - /home/oracle/webhdfs/settings.conf
 ```
+
+Also I recently added mrails_lib.sh and mrails.conf: shell resources which intended to be used as application level program;
+mrails_lib.sh provides you with routines for uploading to hdfs oracle-awr, atop (upload_awrto_storage & upload_atopto_storage routines) and some csv-file (upload_to_storage);
+In case of uploadign to hdfs some csv-file: it is supposed that given csv-file: is mainteined by some other program or task or utility ao something like it;
+upolad_to_storade-routine: does not anything with given csv-file, except reading data from it;
