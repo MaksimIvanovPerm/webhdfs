@@ -230,6 +230,7 @@ Here the options are:
 -o|--overwrite	[true|false|t|f]	- Do (t|true) of do not (f|false - default) rewtite hdfs-file, if there is file with given name;
 -p|--permission	[0-1777]		- Permission for new file, default: 644;
 -m|--maxtime	[int]			- Limit for uploading time; In curl's term it's value for --max-time option; Default 10 seconds;
+-r|--replication	[int]		- Replication factor for file in hdfs; Default: 2, valid value: [1-9]{1}
 -h|--help				- This help
 "
 }
@@ -1307,6 +1308,7 @@ local v_hdfspath=""
 local v_overwrite=""
 local v_permission=""
 local v_maxtime="10"
+local v_replication="2"
 
 empty_args_notallowed "$1" "$v_module"
 if [ "$?" -ne "0" ]
@@ -1387,6 +1389,19 @@ do
 		v_permission="$2"
 		shift 2
 		;;
+                "-r"|"--replication")
+                if [[ ! "$2" =~ [0-9]{1} ]]
+                then
+                        log_info "${v_module} ${2} is a wrong value for -r|--replication option;"
+                        create_file_usage; return 1
+                fi
+                [ "$2" -gt "9" -o "$2" -lt "1" ] && {
+                        log_info "${v_module} ${2} is a wrong value for -r|--replication option;"
+                        create_file_usage; return 1
+                }
+                v_replication="$2"
+                shift 2
+                ;;
 		*)
 		log_info "${v_module} ${1} is not an option;"
 		create_file_usage; return 1
@@ -1404,6 +1419,7 @@ v_hdfspath=$(prefix_hdfspath "$v_hdfspath")
 
 [ ! -z "$v_overwrite" ] && v_operation="${v_operation}&overwrite=${v_overwrite}"
 [ ! -z "$v_permission" ] && v_operation="${v_operation}&permission=${v_permission}"
+v_operation="${v_operation}&replication=${v_replication}"
 V_URL="https://${WEBHDFS_SERVER}:${WEBHDFS_PORT}/gateway/default/webhdfs/v1/${WH_PATH}${v_hdfspath}${v_operation}"
 V_URL=${V_URL%$'\r'}
 #### -v option and 2>&1 is essential here ###
